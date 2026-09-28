@@ -59,6 +59,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
         <span>Accounts</span>
       </a>
+      <a href="#" class="nav-item" id="nav-integrations" onclick="showPage('integrations', this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14"/><path d="M15.54 8.46a5 5 0 010 7.07M8.46 8.46a5 5 0 000 7.07"/></svg>
+        <span>Integrations</span>
+      </a>
     </nav>
 
     <div class="sidebar-footer">
@@ -177,6 +181,7 @@
               <h2>Top Holdings</h2>
               <button class="btn-ghost btn-sm" onclick="showPage('holdings', document.getElementById('nav-holdings'))">View All</button>
             </div>
+            <div class="table-scroll">
             <table class="data-table" id="holdingsTable">
               <thead>
                 <tr>
@@ -191,6 +196,7 @@
               </thead>
               <tbody id="holdingsBody"></tbody>
             </table>
+            </div>
           </div>
 
           <!-- Sector Breakdown -->
@@ -241,6 +247,7 @@
               <button class="btn-primary btn-sm" onclick="openAddHoldingModal()">+ Add Holding</button>
             </div>
           </div>
+          <div class="table-scroll">
           <table class="data-table" id="holdingsTableFull">
             <thead>
               <tr>
@@ -259,6 +266,7 @@
             </thead>
             <tbody id="holdingsBodyFull"></tbody>
           </table>
+          </div>
         </div>
       </section>
 
@@ -277,6 +285,7 @@
               <button class="btn-ghost btn-sm">↓ Export CSV</button>
             </div>
           </div>
+          <div class="table-scroll">
           <table class="data-table">
             <thead>
               <tr>
@@ -292,6 +301,7 @@
             </thead>
             <tbody id="txnBody"></tbody>
           </table>
+          </div>
         </div>
       </section>
 
@@ -374,6 +384,38 @@
           </div>
           <div class="broker-grid" id="brokerGrid"></div>
         </div>
+      </section>
+
+      <!-- ===== INTEGRATIONS PAGE ===== -->
+      <section class="page" id="page-integrations">
+
+        <!-- Hero banner -->
+        <div class="integrations-hero">
+          <div class="integrations-hero-icon">🔌</div>
+          <div class="integrations-hero-text">
+            <h2>API Integrations — Connect Your Investment Apps</h2>
+            <p>Add your broker API keys below to automatically fetch live holdings, portfolio value, and transaction history. All keys are stored locally in this session only and are never transmitted to any server.</p>
+          </div>
+        </div>
+
+        <!-- Summary stats (populated by JS) -->
+        <div class="ic-summary-row" id="icSummaryRow"></div>
+
+        <!-- Provider Cards -->
+        <div class="integrations-grid" id="integrationsGrid"></div>
+
+        <!-- Fetch / Sync Log -->
+        <div class="card fetch-log">
+          <div class="fetch-log-header">
+            <div class="log-live-dot"></div>
+            <h3>Sync Activity Log</h3>
+            <button class="btn-ghost btn-sm" style="margin-left:auto" onclick="clearLog()">Clear</button>
+          </div>
+          <div class="fetch-log-body" id="fetchLogBody">
+            <div class="log-line"><span class="log-time">--:--:--</span><span class="log-msg info">Waiting for API connections…</span></div>
+          </div>
+        </div>
+
       </section>
     </div>
   </main>

@@ -99,12 +99,13 @@ function showPage(name, navEl) {
 
   // Update title
   const titles = {
-    dashboard: 'Dashboard',
-    holdings: 'Holdings',
+    dashboard:    'Dashboard',
+    holdings:     'Holdings',
     transactions: 'Transactions',
-    analytics: 'Analytics',
-    alerts: 'Alerts',
-    accounts: 'Accounts',
+    analytics:    'Analytics',
+    alerts:       'Alerts',
+    accounts:     'Accounts',
+    integrations: 'API Integrations',
   };
   document.getElementById('pageTitle').textContent = titles[name] || name;
 
@@ -709,6 +710,345 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ----------------------------------------------------------------
+//  API INTEGRATIONS
+// ----------------------------------------------------------------
+
+const PROVIDERS = [
+  {
+    id: 'zerodha',
+    name: 'Zerodha Kite',
+    emoji: '🟢',
+    bg: 'rgba(16,185,129,0.08)',
+    desc: 'India\'s largest stock broker — Kite Connect API',
+    docsUrl: 'https://kite.trade/docs/connect/v3/',
+    fields: [
+      { key: 'api_key',    label: 'API Key',    placeholder: 'kiteconnect_api_key_…' },
+      { key: 'api_secret', label: 'API Secret', placeholder: 'kiteconnect_secret_…', secret: true },
+      { key: 'access_token', label: 'Access Token (optional — auto-generated after OAuth)', placeholder: 'Ku0…', secret: true },
+    ],
+    mockHoldings: [
+      { symbol: 'RELIANCE', name: 'Reliance Industries', qty: 50, avgCost: 2200, ltp: 2950, class: 'equity' },
+      { symbol: 'INFY',     name: 'Infosys Ltd',         qty: 120, avgCost: 1400, ltp: 1780, class: 'equity' },
+      { symbol: 'TCS',      name: 'Tata Consultancy',    qty: 30, avgCost: 3300, ltp: 3750, class: 'equity' },
+      { symbol: 'NIFTYBEES',name: 'Nippon Nifty ETF',    qty: 400, avgCost: 180,  ltp: 235,  class: 'etf'    },
+    ],
+  },
+  {
+    id: 'upstox',
+    name: 'Upstox',
+    emoji: '🔵',
+    bg: 'rgba(59,130,246,0.08)',
+    desc: 'Upstox Pro API — equities, MF & derivatives',
+    docsUrl: 'https://upstox.com/developer/api-documentation/',
+    fields: [
+      { key: 'api_key',    label: 'API Key',    placeholder: 'upstox_api_key_…' },
+      { key: 'api_secret', label: 'API Secret', placeholder: 'upstox_secret_…', secret: true },
+      { key: 'redirect_uri', label: 'Redirect URI', placeholder: 'https://your-app.com/callback' },
+    ],
+    mockHoldings: [
+      { symbol: 'HDFC MF',    name: 'HDFC Mid Cap Opport.', qty: 1800, avgCost: 58,   ltp: 91,   class: 'mutual_fund' },
+      { symbol: 'ASIANPAINT', name: 'Asian Paints Ltd',      qty: 25,   avgCost: 2900, ltp: 3100, class: 'equity'      },
+    ],
+  },
+  {
+    id: 'groww',
+    name: 'Groww',
+    emoji: '🟡',
+    bg: 'rgba(245,158,11,0.08)',
+    desc: 'Groww API — mutual funds, stocks & SIPs',
+    docsUrl: 'https://groww.in/open-api',
+    fields: [
+      { key: 'client_id',     label: 'Client ID',     placeholder: 'groww_client_id_…' },
+      { key: 'client_secret', label: 'Client Secret', placeholder: 'groww_secret_…', secret: true },
+    ],
+    mockHoldings: [
+      { symbol: 'AXIS BF', name: 'Axis Bluechip Fund', qty: 500, avgCost: 42, ltp: 55, class: 'mutual_fund' },
+    ],
+  },
+  {
+    id: 'angel',
+    name: 'Angel One',
+    emoji: '🔴',
+    bg: 'rgba(239,68,68,0.08)',
+    desc: 'Angel One SmartAPI — stocks & options',
+    docsUrl: 'https://smartapi.angelbroking.com/docs',
+    fields: [
+      { key: 'api_key',  label: 'API Key',  placeholder: 'angel_api_key_…' },
+      { key: 'client_id', label: 'Client ID', placeholder: 'A12345' },
+      { key: 'mpin',     label: 'MPIN',      placeholder: '••••••', secret: true },
+      { key: 'totp_key', label: 'TOTP Secret Key', placeholder: 'TOTP_SECRET…', secret: true },
+    ],
+    mockHoldings: [],
+  },
+  {
+    id: 'coin',
+    name: 'Coin (Zerodha MF)',
+    emoji: '💰',
+    bg: 'rgba(251,191,36,0.08)',
+    desc: 'Zerodha Coin — direct mutual funds platform',
+    docsUrl: 'https://kite.trade/docs/connect/v3/',
+    fields: [
+      { key: 'api_key',    label: 'API Key (same as Kite Connect)', placeholder: 'kiteconnect_api_key_…' },
+      { key: 'api_secret', label: 'API Secret', placeholder: 'kiteconnect_secret_…', secret: true },
+    ],
+    mockHoldings: [],
+  },
+  {
+    id: 'binance',
+    name: 'Binance',
+    emoji: '₿',
+    bg: 'rgba(245,158,11,0.08)',
+    desc: 'Binance API — crypto spot & futures read-only',
+    docsUrl: 'https://binance-docs.github.io/apidocs/',
+    fields: [
+      { key: 'api_key',    label: 'API Key',    placeholder: 'binance_api_key_…' },
+      { key: 'api_secret', label: 'Secret Key', placeholder: 'binance_secret_…', secret: true },
+    ],
+    mockHoldings: [
+      { symbol: 'BTC',  name: 'Bitcoin',  qty: 0.12,  avgCost: 2800000, ltp: 5400000, class: 'crypto' },
+      { symbol: 'ETH',  name: 'Ethereum', qty: 1.5,   avgCost: 180000,  ltp: 320000,  class: 'crypto' },
+    ],
+  },
+];
+
+// Per-provider state { keys: {}, status: 'disconnected'|'connecting'|'connected'|'error', holdings: [] }
+const INT_STATE = {};
+PROVIDERS.forEach(p => {
+  INT_STATE[p.id] = { keys: {}, status: 'disconnected', holdings: [], lastSync: null };
+});
+
+// ---- Render integration cards ----
+function renderIntegrations() {
+  const grid = document.getElementById('integrationsGrid');
+  if (!grid) return;
+
+  grid.innerHTML = PROVIDERS.map(p => {
+    const st = INT_STATE[p.id];
+    const statusLabel = { disconnected: 'Not connected', connecting: 'Connecting…', connected: 'Connected', error: 'Error' }[st.status];
+    const isConnected = st.status === 'connected';
+
+    const fields = p.fields.map(f => `
+      <div class="api-field">
+        <label>${f.label} <span class="required">*</span></label>
+        <div class="api-input-wrap">
+          <input
+            type="${f.secret ? 'password' : 'text'}"
+            id="int_${p.id}_${f.key}"
+            placeholder="${f.placeholder}"
+            value="${st.keys[f.key] || ''}"
+            autocomplete="off"
+          />
+          ${f.secret ? `<button class="api-eye-btn" onclick="toggleEye('int_${p.id}_${f.key}', this)" title="Show/hide">👁</button>` : ''}
+        </div>
+      </div>
+    `).join('');
+
+    const holdingCount = st.holdings.length;
+    const portfolioVal = st.holdings.reduce((s, h) => s + h.ltp * h.qty, 0);
+
+    return `
+    <div class="integration-card ${isConnected ? 'connected' : ''}" id="ic-card-${p.id}">
+      <div class="ic-header">
+        <div class="ic-logo" style="background:${p.bg}">${p.emoji}</div>
+        <div class="ic-info">
+          <div class="ic-name">${p.name}</div>
+          <div class="ic-desc">${p.desc}</div>
+        </div>
+        <span class="ic-status ${st.status}">${statusLabel}</span>
+      </div>
+      <div class="ic-body">
+        ${fields}
+        ${isConnected ? `
+        <div style="background:var(--green-dim);border:1px solid rgba(16,185,129,0.2);border-radius:6px;padding:0.7rem 0.9rem;font-size:0.79rem;color:var(--green)">
+          ✅ <strong>${holdingCount}</strong> holdings synced &nbsp;·&nbsp;
+          Portfolio value: <strong>₹${portfolioVal.toLocaleString('en-IN', {maximumFractionDigits:0})}</strong>
+          &nbsp;·&nbsp; Last sync: <strong>${st.lastSync}</strong>
+        </div>` : ''}
+      </div>
+      <div class="ic-footer">
+        <div class="ic-footer-meta">
+          <a href="${p.docsUrl}" target="_blank" rel="noopener" style="color:var(--blue);text-decoration:none;font-size:0.72rem;">📄 API Docs ↗</a>
+        </div>
+        ${isConnected
+          ? `<button class="btn-ghost btn-sm" onclick="fetchFromProvider('${p.id}')">🔄 Re-sync</button>
+             <button class="btn-ghost btn-sm" style="color:var(--red);border-color:rgba(239,68,68,0.3)" onclick="disconnectProvider('${p.id}')">Disconnect</button>`
+          : `<button class="btn-primary btn-sm" onclick="connectProvider('${p.id}')">Connect &amp; Fetch</button>`
+        }
+      </div>
+    </div>`;
+  }).join('');
+
+  renderICSummary();
+}
+
+// ---- Summary row ----
+function renderICSummary() {
+  const el = document.getElementById('icSummaryRow');
+  if (!el) return;
+  const connected = PROVIDERS.filter(p => INT_STATE[p.id].status === 'connected').length;
+  const totalHoldings = PROVIDERS.reduce((s, p) => s + INT_STATE[p.id].holdings.length, 0);
+  const totalValue = PROVIDERS.reduce((s, p) =>
+    s + INT_STATE[p.id].holdings.reduce((sv, h) => sv + h.ltp * h.qty, 0), 0);
+
+  el.innerHTML = [
+    { label: 'Connected Brokers', value: `${connected}/${PROVIDERS.length}`, sub: 'API integrations active' },
+    { label: 'Holdings Fetched',  value: totalHoldings,                       sub: 'Across all connected apps' },
+    { label: 'Live Portfolio Value', value: totalValue > 0 ? '₹' + totalValue.toLocaleString('en-IN', {maximumFractionDigits:0}) : '—', sub: 'Sum of all synced accounts' },
+  ].map(s => `
+    <div class="ic-summary-card">
+      <div class="ic-summary-label">${s.label}</div>
+      <div class="ic-summary-value">${s.value}</div>
+      <div class="ic-summary-sub">${s.sub}</div>
+    </div>
+  `).join('');
+}
+
+// ---- Connect / fetch flow ----
+function collectKeys(providerId) {
+  const p = PROVIDERS.find(x => x.id === providerId);
+  const keys = {};
+  p.fields.forEach(f => {
+    const el = document.getElementById(`int_${p.id}_${f.key}`);
+    if (el) keys[f.key] = el.value.trim();
+  });
+  return keys;
+}
+
+function connectProvider(id) {
+  const p = PROVIDERS.find(x => x.id === id);
+  const keys = collectKeys(id);
+  const firstRequiredKey = p.fields[0].key;
+
+  if (!keys[firstRequiredKey]) {
+    showToast(`⚠️ Please enter the ${p.fields[0].label} for ${p.name}`);
+    return;
+  }
+
+  INT_STATE[id].keys = keys;
+  INT_STATE[id].status = 'connecting';
+  renderIntegrations();
+  appendLog('info', `Initiating connection to ${p.name}…`);
+
+  setTimeout(() => {
+    appendLog('info', `Authenticating with ${p.name} API…`);
+  }, 600);
+
+  setTimeout(() => {
+    appendLog('ok', `${p.name}: Auth successful. Fetching holdings…`);
+    fetchFromProvider(id, true);
+  }, 1400);
+}
+
+function fetchFromProvider(id, isFirstConnect = false) {
+  const p = PROVIDERS.find(x => x.id === id);
+  if (!isFirstConnect) {
+    appendLog('info', `Re-syncing ${p.name}…`);
+  }
+
+  const mockH = p.mockHoldings;
+
+  // Simulate per-holding fetch logs
+  mockH.forEach((h, i) => {
+    setTimeout(() => {
+      appendLog('ok', `${p.name}: Fetched ${h.symbol} — ${h.qty} units @ ₹${h.ltp.toLocaleString('en-IN')}`);
+    }, i * 180 + 200);
+  });
+
+  const delay = mockH.length * 180 + 600;
+  setTimeout(() => {
+    const now = new Date();
+    const syncTime = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+
+    INT_STATE[id].status = 'connected';
+    INT_STATE[id].holdings = mockH;
+    INT_STATE[id].lastSync = syncTime;
+
+    // Merge into global HOLDINGS (deduplicate by symbol+account)
+    mockH.forEach(h => {
+      const acct = p.name.split(' ')[0]; // e.g. 'Zerodha'
+      const exists = HOLDINGS.find(x => x.symbol === h.symbol && x.account === acct);
+      if (!exists) {
+        HOLDINGS.push({
+          id: `api_${id}_${h.symbol}`,
+          symbol: h.symbol,
+          name: h.name,
+          class: h.class,
+          account: acct,
+          qty: h.qty,
+          avgCost: h.avgCost,
+          ltp: h.ltp,
+          sector: 'API Synced',
+          weight: 0,
+        });
+      } else {
+        // Update LTP from API
+        exists.ltp = h.ltp;
+      }
+    });
+
+    // Refresh dependent views
+    renderHoldingsTable();
+    renderHoldingsTableFull();
+    renderIntegrations();
+    appendLog('ok', `✅ ${p.name}: Sync complete — ${mockH.length} holdings imported.`);
+    showToast(`${p.name} synced! ${mockH.length} holdings imported.`);
+  }, delay);
+}
+
+function disconnectProvider(id) {
+  const p = PROVIDERS.find(x => x.id === id);
+  INT_STATE[id].status = 'disconnected';
+  INT_STATE[id].holdings = [];
+  INT_STATE[id].keys = {};
+  INT_STATE[id].lastSync = null;
+
+  // Remove API-sourced holdings from global list
+  const acct = p.name.split(' ')[0];
+  for (let i = HOLDINGS.length - 1; i >= 0; i--) {
+    if (HOLDINGS[i].id && HOLDINGS[i].id.startsWith(`api_${id}_`)) {
+      HOLDINGS.splice(i, 1);
+    }
+  }
+
+  renderIntegrations();
+  renderHoldingsTable();
+  renderHoldingsTableFull();
+  appendLog('warn', `${p.name} disconnected. Holdings removed from view.`);
+  showToast(`${p.name} disconnected.`);
+}
+
+// ---- Eye toggle ----
+function toggleEye(inputId, btn) {
+  const el = document.getElementById(inputId);
+  if (!el) return;
+  if (el.type === 'password') {
+    el.type = 'text';
+    btn.textContent = '🙈';
+  } else {
+    el.type = 'password';
+    btn.textContent = '👁';
+  }
+}
+
+// ---- Log helpers ----
+function appendLog(level, msg) {
+  const container = document.getElementById('fetchLogBody');
+  if (!container) return;
+  const now = new Date();
+  const t = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const line = document.createElement('div');
+  line.className = 'log-line';
+  line.innerHTML = `<span class="log-time">${t}</span><span class="log-msg ${level}">${msg}</span>`;
+  container.appendChild(line);
+  container.scrollTop = container.scrollHeight;
+}
+
+function clearLog() {
+  const el = document.getElementById('fetchLogBody');
+  if (el) el.innerHTML = '<div class="log-line"><span class="log-time">--:--:--</span><span class="log-msg info">Log cleared.</span></div>';
+}
+
+// ----------------------------------------------------------------
 //  Initialise All
 // ----------------------------------------------------------------
 function init() {
@@ -728,6 +1068,7 @@ function init() {
   renderRebalance();
   renderAlertRules();
   renderAccounts();
+  renderIntegrations();
 }
 
 document.addEventListener('DOMContentLoaded', init);
